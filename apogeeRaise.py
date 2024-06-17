@@ -29,10 +29,10 @@ def apoapsisEq (OGapoapsis):
     v1m=v1*1000
     
     ## Defining final r
-    r2=140000+6378
+    r2=OGapoapsis+6378
     
     # Defining final a
-    a2=(6563+400000)/2
+    a2=(6378+410000)/2
     
     # Defining equation to find initial velocity
     v2=math.sqrt(u*((2/r2)-(1/a2)))
