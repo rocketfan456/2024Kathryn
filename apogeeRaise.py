@@ -12,7 +12,7 @@
 import math
     
 # Defining dV apoapsis equation
-def apoapsisEq (OGapoapsis):
+def apogeeRaise (OGapoapsis):
     # Defining mu in km^2/s^2
     u=398600
     
