@@ -124,7 +124,7 @@ class TankSet:
         # Calculate propellant volume and volume per tank (include ullage)
         # volPropOx = MissionSummary.mPropImpulseOx/TankSet.Oxygen
         # volPropFuel = MissionSummary.mPropImpulseFuel/TankSet.strPropType
-        volPropTotal = (MissionSummary.mPropImpulseOx/TankSet.rhoProp) + (MissionSummary.mPropImpulseFuel/TankSet.rhoProp)
+        volPropTotal = (mPropTotal/rhoProp) 
         volPropPerTank = volPropTotal / nTanks
         volPerTank      = volPropPerTank*(1+pctUllage)
         
@@ -170,7 +170,7 @@ class TankSet:
         mCylPerTank   = volMatCylPerTank*rhoMat
         
         # Add in the fudge factor 
-        mTotalPerTank = 1.2
+        mTotalPerTank = 1.2*(mDomesPerTank+mCylPerTank)
         mTotal        = (mTotalPerTank*nTanks)*(1.1**nTanks)
         
        

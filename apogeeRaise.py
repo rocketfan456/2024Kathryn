@@ -32,7 +32,7 @@ def ApogeeRaise (OGapoapsis):
     r2=185+6378
    
     # Defining final a
-    a2=(6378+185+410000)/2
+    a2=(6378+185+410000+6378)/2
    
     # Defining equation to find initial velocity
     v2=math.sqrt(u*((2/r2)-(1/a2)))
