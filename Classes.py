@@ -209,7 +209,7 @@ class TankSet:
         self.mTotal          = mTotal
 
 class Subsystems:
-    def __init__(self, mVehicleStart, clsEng, clsOxTankSet,clsTankSet, pwrDrawPayload, strArrayType, strLanderSize, tBattery):
+    def __init__(self, mVehicleStart, clsEng, clsOxTankSet,clsFuelTankSet, pwrDrawPayload, strArrayType, strLanderSize, tBattery):
         pctMarginArray      = .3
         pctDepthOfDischarge = .3
         nrgdenBattery       =  100 # w-hr/kg
@@ -238,7 +238,7 @@ class Subsystems:
         else: 
             pwrdenArray =  75 # w/kg
         
-        lTank = max(clsOxTankSet.lTankLength,clsTankSet.lTankLength) # pick the maximum length of your clsOxTankSet.lTankLength and clsTankSet.lTanklength
+        lTank = max(clsOxTankSet.lTankLength,clsFuelTankSet.lTankLength) # pick the maximum length of your clsOxTankSet.lTankLength and clsFuelTankSet.lTanklength
         mWiring   = 1.058*(mVehicleStart**.5)*(lTank**.25)
         
         pwrTotalMargined = (1+pctMarginArray)*(pwrDrawLander+pwrDrawPayload)#the parenthesis is the sum of lander power and payload power
@@ -268,40 +268,40 @@ class Subsystems:
             mSOFIOx = 0
             mMLIOx  = thkMLI*clsOxTankSet.saTotalPerTank*clsOxTankSet.nTanks*rhoMLI
 
-        if clsTankSet.strPropType == 'Hydrogen':
-            mSOFIFuel = thkSOFI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoSOFI
-            mMLIFuel  = thkMLI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoMLI
+        if clsFuelTankSet.strPropType == 'Hydrogen':
+            mSOFIFuel = thkSOFI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoSOFI
+            mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine  = 40
-        elif clsTankSet.strPropType == 'Methane':
-            mSOFIFuel = thkSOFI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoSOFI
-            mMLIFuel  = thkMLI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoMLI
+        elif clsFuelTankSet.strPropType == 'Methane':
+            mSOFIFuel = thkSOFI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoSOFI
+            mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine = 50
-        elif clsTankSet.strPropType == 'MMH':
+        elif clsFuelTankSet.strPropType == 'MMH':
             mSOFIFuel = 0
-            mMLIFuel  = thkMLI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoMLI
+            mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine = 50
-        elif clsTankSet.strPropType == 'RP-1':
+        elif clsFuelTankSet.strPropType == 'RP-1':
             mSOFIFuel = 0
-            mMLIFuel  = thkMLI*clsTankSet.saTotalPerTank*clsTankSet.nTanks*rhoMLI
+            mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine  = 60
         
         mEngine = 1/(twEngine/clsEng.thrust)/9.81
 
         # Checking mSOFIFuel+mMLIFuel
-        mPropulsion = mRCS+mPressurization+mFeedlines+mSOFIOx+mMLIOx+mSOFIFuel+mMLIFuel+mEngine
-
+        mPropulsion = mRCS + mPressurization + mFeedlines + mSOFIOx + mMLIOx + mSOFIFuel + mMLIFuel + mEngine \
+            + clsOxTankSet.mTotal + clsFuelTankSet.mTotal 
         # Thermal
         mThermal = .03*mVehicleStart
         
         # Structure
         mDryWithoutStructure = mAvionics + mElectrical + mPropulsion + mThermal 
         mStructureAndGear    = mDryWithoutStructure/(1-(pctStructure+pctLandingGear) )*(pctStructure+pctLandingGear)
-        
+
         mTotalBasic     = mDryWithoutStructure + mStructureAndGear
         mMGA            = pctMGA*mTotalBasic
-        mTotalPredicted = mMGA*mTotalBasic
-        mMargin         = pctMargin*mTotalPredicted
-        mTotalAllowable = mMargin*mTotalPredicted
+        mTotalPredicted = mMGA+mTotalBasic
+        mMargin         = pctMargin*mTotalBasic
+        mTotalAllowable = mMargin+mTotalPredicted
         
             
         self.mAvionics         = mAvionics
