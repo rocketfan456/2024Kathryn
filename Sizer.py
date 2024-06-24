@@ -1,6 +1,6 @@
 import numpy as np
 import Classes as cf
-import apogeeRaise as aR
+import ApogeeRaise as aR
 import matplotlib.pyplot as plt
 
 
