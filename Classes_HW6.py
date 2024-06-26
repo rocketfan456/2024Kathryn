@@ -1,51 +1,32 @@
-# Importing libraries
-import math
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec  9 22:12:32 2020
+
+@author: jlamp
+"""
 import numpy as np
 
-# Defining dV apoapsis equation
-def apogeeRaise (OGapoapsis):
-    # Defining mu in km^2/s^2
-    u=398600
-   
-    # Defining intial r using input info
-    r1=185+6378
-   
-    # Defining initial a using input info
-    a1=(6563+OGapoapsis+6378)/2
-   
-    # Defining equation to find initial velocity
-    v1=math.sqrt(u*((2/r1)-(1/a1)))
-   
-    # Converting v1 from km/s to m/s
-    v1m=v1*1000
-   
-    ## Defining final r
-    r2=185+6378
-   
-    # Defining final a
-    a2=(6378+185+410000+6378)/2
-   
-    # Defining equation to find initial velocity
-    v2=math.sqrt(u*((2/r2)-(1/a2)))
-   
-    # Converting v2 from km/s to m/s
-    v2m=v2*1000
-   
-    # Change in v (delta v in m/s)
-    deltaV=v2m-v1m
-   
-    return deltaV
+def ApogeeRaise(apogeeStart):
+    mu = 398600
+    apogeeEnd = 410000
+    rEarth = 6378
+    rStart = rEarth+185
+    aStart = (rStart+rEarth+apogeeStart)/2
+    aEnd   = (rStart+rEarth+apogeeEnd)/2
+        
+    vStart = np.sqrt(mu*(2/rStart-1/aStart))
+    vEnd   = np.sqrt(mu*(2/rStart-1/aEnd))
+    dv     = vEnd-vStart
+       
+    return dv*1000 # multiply by 1000 to put in m/s
 
-# This function will output a summary of each phase
 def PrintData(phaseList):
     print('{0:25s}'.format("------------------------------------------------------------------------" ))
-    print('{0:20s}{1:>11s}{2:>11s}{3:>11s}'.format("Phase Name", "DV (m/s)", "mStart (kg)", "mEnd (kg)" ))
+    print('{0:20s}{1:>11s}{2:>11s}{3:>11s}'.format("Phase Name", "DV (m/s)", "Mass0 (kg)", "MassF (kg)" ))
     print('{0:25s}'.format("------------------------------------------------------------------------" ))
     for curPhase in phaseList:
-        print('{0:20s}{1:11.1f}{2:11.1f}{3:11.1f}'.format(curPhase.strName, curPhase.dvPhase, curPhase.mStart, curPhase.mEnd))
+        print('{0:20s}{1:11.1f}{2:11.1f}{3:11.1f}'.format(curPhase.strName, curPhase.dvPhase, curPhase.mStart, curPhase.mEnd ))
 
-# This class will create a generic "phase" which will do propellant 
-# calculations
 class Phase:
 
     def __init__(self,strName, mStart, dvPhase, clsEng, strPhaseType,dtPhase, mdotRCS, mdotOxBoiloff, mdotFuelBoiloff):
@@ -54,48 +35,41 @@ class Phase:
         # update the dV calculate the thrust-to-weight
         twPhase = clsEng.thrust/(mStart*9.81)
         if dvPhase<0:
-            dvPhase = (4335*(math.exp(-20.25*twPhase)))+1880 #use the thrust-to-weight equation from the slides
+            dvPhase = 4335*np.exp(-(twPhase)*20.25)+1880
 
 
         # Calculate Impulse Propellant Using Rocket Equation   
-        # We specify Impulse because we'll have other types later
-        mEnd = mStart/(math.exp((dvPhase/(9.81*clsEng.isp))))
-        mPropImpulse = mStart-mEnd
-        mPropImpulseReserve = .02*mPropImpulse # This is 2% of the impulse propellant
-        
-        # Determine Oxidizer and Fuel
-        mPropImpulseOx = (mPropImpulse*clsEng.mr)/(1+clsEng.mr)
-        mPropImpulseFuel = (mPropImpulse)/(1+clsEng.mr)
-         
+        mPropImpulse = mStart - mStart / np.exp(dvPhase/(9.81*clsEng.isp))
+        mPropImpulseReserve = 0.02*mPropImpulse
+    
         # Modify phase duration if this is a burn 
         if dvPhase>0:
             dtPhase = mPropImpulse/clsEng.mdot
     
-        # Move the Impulse propellant into the correct category
+                # Move the Impulse propellant into the correct category
         if clsEng.strPropType == "Biprop":
-            mPropImpulseOx = mPropImpulse*clsEng.mr/(1+clsEng.mr) # Use mixture ratio to calculate the ox impulse used
-            mPropImpulseFuel = mPropImpulse/(1+clsEng.mr) # Use mixture ratio to calculate the fuel impulse used
+            mPropImpulseOx = mPropImpulse*clsEng.mr/(1+clsEng.mr)
+            mPropImpulseFuel = mPropImpulse/(1+clsEng.mr)
             
-            mPropImpulseReserveOx = mPropImpulseReserve*clsEng.mr/(1+clsEng.mr)  # Use the mixture ratio to calculate the ox reserve
-            mPropImpulseReserveFuel = mPropImpulseReserve/(1+clsEng.mr) # Use the mixture ratio to calculate the fuel reserve
+            mPropImpulseReserveOx = mPropImpulseReserve*clsEng.mr/(1+clsEng.mr)
+            mPropImpulseReserveFuel = mPropImpulseReserve/(1+clsEng.mr)
             
-            mPropImpulseMono = 0 # this is a biprop engine, so no monoprop use
-            mPropImpulseReserveMono = 0 # this is a biprop engine, so no monoprop use
-            
+            mPropImpulseMono = 0
+            mPropImpulseReserveMono = 0
         elif clsEng.strPropType == "Monoprop":
-            mPropImpulseOx = 0 # this is a monoprop engine, so no biprop use
-            mPropImpulseFuel =  0 # this is a monoprop engine, so no biprop use
+            mPropImpulseOx = 0
+            mPropImpulseFuel = 0
             
-            mPropImpulseReserveOx = 0 # this is a monoprop engine, so no biprop use
-            mPropImpulseReserveFuel =  0 # this is a monoprop engine, so no biprop use          
+            mPropImpulseReserveOx = 0
+            mPropImpulseReserveFuel = 0          
             
             mPropImpulseMono = mPropImpulse
             mPropImpulseReserveMono = mPropImpulseReserve
         
         # Determine boiloff losses
-        mPropBoiloffOx = mdotOxBoiloff*dtPhase # ox boiloff rate times phase duration
-        mPropBoiloffFuel = mdotFuelBoiloff*dtPhase # fuel boiloff rate times phase duration
-        mPropBoiloff   = mPropBoiloffOx+mPropBoiloffFuel # ox + fuel
+        mPropBoiloffOx = mdotOxBoiloff*dtPhase
+        mPropBoiloffFuel = mdotFuelBoiloff*dtPhase
+        mPropBoiloff   = mPropBoiloffOx + mPropBoiloffFuel
         
         # Determine RCS losses
         mPropRCS = mdotRCS*dtPhase
@@ -104,23 +78,20 @@ class Phase:
         if strPhaseType =="Chill":
             mChill = 10
             mChillOx = 5
-            mChillFuel =5
+            mChillFuel = 5
         else:
-            # not a chill phase, so no extra usage
-            mChill= 0 
-            mChillOx = 0
-            mChillFuel = 0 
+            mChill=0
+            mChillOx =0
+            mChillFuel = 0
             
         if strPhaseType =="Settling":
-            mSettling = 5 # settling usage
+            mSettling = 5
         else:
-            mSettling= 0 #no settling usage
+            mSettling=0
 
         
         # Determine final mass        
-        # subtract impulse, boiloff, rcs, chill, and settling
-        mEnd = mStart 
-        
+        mEnd = mStart - mPropImpulse - mPropBoiloff - mPropRCS - mChill - mSettling
         
         
         # Move data to class structure to save information
@@ -149,9 +120,7 @@ class Phase:
         self.mChillOx           = mChillOx
         self.mChillFuel         = mChillFuel
         self.mSettling          = mSettling
-        
-# This class creates a summary of the entire mission - summing things up across
-# phases         
+          
 class MissionSummary:
     def __init__(self, tupPhases):
         """
@@ -159,53 +128,52 @@ class MissionSummary:
             tupPhases: list of phase classes
         
         """
+
+   
         
-        pctResidual = .01 # value from slides
+        pctResdiual = 0.01
         
-        # Initialize variables 
         mPropImpulse     = 0
         mPropImpulseOx   = 0
         mPropImpulseFuel = 0
-
         mPropImpulseMono = 0
         mPropImpulseReserve = 0
-        mPropImpulseReserveOx =0
+        mPropImpulseReserveOx = 0
         mPropImpulseReserveFuel = 0
         mPropImpulseReserveMono = 0
         mPropBoiloff     = 0
         mPropBoiloffOx   = 0
         mPropBoiloffFuel = 0
-        mPropRCS         = 0
+        mPropRCS         = 0 
         
         mPropChill     = 0
         mPropChillOx   = 0
         mPropChillFuel = 0
         
         mPropSettling = 0
-        
+
         # sum up the usages by phase
         for curPhase in tupPhases:
             mPropImpulse     += curPhase.mPropImpulse 
             mPropImpulseOx   += curPhase.mPropImpulseOx
             mPropImpulseFuel += curPhase.mPropImpulseFuel
-
             mPropImpulseMono += curPhase.mPropImpulseMono
             
             mPropImpulseReserve +=  curPhase.mPropImpulseReserve
             mPropImpulseReserveOx +=  curPhase.mPropImpulseReserveOx
             mPropImpulseReserveFuel += curPhase.mPropImpulseReserveFuel
-            mPropImpulseReserveMono +=  mPropImpulseReserveMono
+            mPropImpulseReserveMono +=  curPhase.mPropImpulseReserveMono
             
             mPropBoiloff     +=  curPhase.mPropBoiloff
             mPropBoiloffOx   +=  curPhase.mPropBoiloffOx
             mPropBoiloffFuel +=  curPhase.mPropBoiloffFuel
-            mPropRCS         +=   curPhase.mPropRCS
+            mPropRCS         +=  curPhase.mPropRCS 
             
-            mPropChill       += MissionSummary.mPropChill
-            mPropChillOx     += MissionSummary.mPropChillOx
-            mPropChillFuel   += MissionSummary.mPropChillFuel
+            mPropChill       += curPhase.mChill
+            mPropChillOx     += curPhase.mChillOx
+            mPropChillFuel   += curPhase.mChillFuel
             
-            mPropSettling    += MissionSummary.mPropSettling
+            mPropSettling    += curPhase.mSettling
 
         # Stuff everything into self    
         mPropConsumedOx   = mPropImpulseOx   + mPropBoiloffOx + mPropChillOx
@@ -213,9 +181,9 @@ class MissionSummary:
         mPropConsumedMono = mPropImpulseMono + mPropRCS + mPropSettling
         mPropConsumedTotal = mPropConsumedOx + mPropConsumedFuel + mPropConsumedMono
         
-        mPropResidualOx    = MissionSummary.pctResdiual*(mPropConsumedOx+mPropImpulseReserveOx)
-        mPropResidualFuel  = MissionSummary.pctResdiual*(mPropConsumedFuel+mPropImpulseReserveFuel)
-        mPropResidualMono  = MissionSummary.pctResdiual*(mPropConsumedMono+mPropImpulseReserveMono)
+        mPropResidualOx    = pctResdiual*(mPropConsumedOx+mPropImpulseReserveOx)
+        mPropResidualFuel  = pctResdiual*(mPropConsumedFuel+mPropImpulseReserveFuel)
+        mPropResidualMono  = pctResdiual*(mPropConsumedMono+mPropImpulseReserveMono)
         mPropResidualTotal = mPropResidualOx + mPropResidualFuel + mPropResidualMono
         
         mPropAtLandingOx    = mPropResidualOx   +mPropImpulseReserveOx
@@ -232,8 +200,8 @@ class MissionSummary:
         for ii,curPhase in enumerate(tupPhases):
             dvPhase[ii] = curPhase.dvPhase 
         
-
-        # Stuff everything into self    
+        
+        
         self.mPropImpulse      = mPropImpulse
         self.mPropImpulseOx    = mPropImpulseOx
         self.mPropImpulseFuel  = mPropImpulseFuel
@@ -268,10 +236,10 @@ class MissionSummary:
         self.mPropTotalTotal    = mPropTotalTotal
         self.dvPhase            = dvPhase
 
-# This builds up an engine, with an assumed thrust, specific impulse, and 
-# mixture ratio
+
+
 class Engine:
-     def __init__(self, isp, thrust, mr, strPropType, strCryo):
+     def __init__(self,isp, thrust, mr, strPropType, strCryo):
         self.mr = mr
         self.isp = isp
         self.thrust = thrust
@@ -279,20 +247,19 @@ class Engine:
         self.strPropType = strPropType
         self.strCryo = strCryo
 
-
 class TankSet:
     def __init__(self, strPropType,strMatType, nTanks, lMaxRadTank, presTank, mPropTotal):
         # General Parameters for Tanks
-        pctUllage =  .10        # Extra ullage room as a percentage of tank volume
-        aMax      =   50        # Maximum acceleration (m/s2)
-        pctFudge  =    1.2     # Fudge factor for welds, etc
-        fosMat    =    1.5      # factor of safety for material (nd)
+        pctUllage = 0.1         # Extra ullage room as a percentage of tank volume
+        aMax      = 50          # Maximum acceleration (m/s2)
+        pctFudge  = 1.2         # Fudge factor for welds, etc
+        fosMat    = 1.5         # factor of safety for material (nd)
         
         # Tank material switch case
         if strMatType=="Al2219":
-            rhoMat =   2840   # Density of material (kg/m3)
+            rhoMat = 2840     # Density of material (kg/m3)
             sigMat = 2.9e8    # Yield Stress of material (Pa)
-            thkMin =  .004  # Minimum thickness of material (m)
+            thkMin = 0.004    # Minimum thickness of material (m)
         elif strMatType=="Stainless":
             rhoMat = 8000
             sigMat = 2.15e8
@@ -305,7 +272,7 @@ class TankSet:
         
         # Propellant Density switch case
         if strPropType=="Oxygen":
-            rhoProp =  1140    # Density of propellant (kg/m3)
+            rhoProp = 1140     # Density of propellant (kg/m3)
         elif strPropType=="Hydrogen":
             rhoProp = 70
         elif strPropType == "Methane":
@@ -319,10 +286,8 @@ class TankSet:
         
         
         # Calculate propellant volume and volume per tank (include ullage)
-        # volPropOx = MissionSummary.mPropImpulseOx/TankSet.Oxygen
-        # volPropFuel = MissionSummary.mPropImpulseFuel/TankSet.strPropType
-        volPropTotal = (mPropTotal/rhoProp) 
-        volPropPerTank = volPropTotal / nTanks
+        volPropTotal    = mPropTotal/rhoProp
+        volPropPerTank  = volPropTotal/nTanks
         volPerTank      = volPropPerTank*(1+pctUllage)
         
         # Compare volume of tank to maximum allowable for given radius
@@ -342,21 +307,21 @@ class TankSet:
             lCylTank    = (volPerTank-4/3*np.pi*(lRadiusTank**3))/(np.pi*lRadiusTank**2)
        
         # Calculate the total length of the tank 
-        lTankLength = lCylTank+(2*lRadiusTank)
+        lTankLength = 2*lRadiusTank+lCylTank
         
         # Calculate the surface area of each portion of the tank
         saDomesPerTank   = 4*np.pi*lRadiusTank**2
         saCylinderPerTank = 2*np.pi*lRadiusTank*lCylTank
-        saTotalPerTank   = saDomesPerTank+saCylinderPerTank
+        saTotalPerTank   = saDomesPerTank + saCylinderPerTank
        
         # Calculate the thickness.  Start with pressure
         presTotal = fosMat*(presTank + rhoProp*aMax*lTankLength)
-        thkDomesCalc  = (presTotal*lRadiusTank)/(2*sigMat)
+        thkDomesCalc  = presTotal*lRadiusTank/2/sigMat
         thkCylCalc    = 2*thkDomesCalc
         
         # Compare the pressure thickness to the minimum thickness
         thkDomes  = max(thkDomesCalc,thkMin)
-        thkCyl    = max(thkCylCalc,thkMin)
+        thkCyl    = max(thkCylCalc, thkMin)
 
         # Calculate the volume of the material
         volMatDomesPerTank = thkDomes*saDomesPerTank
@@ -367,7 +332,7 @@ class TankSet:
         mCylPerTank   = volMatCylPerTank*rhoMat
         
         # Add in the fudge factor 
-        mTotalPerTank = 1.2*(mDomesPerTank+mCylPerTank)
+        mTotalPerTank = pctFudge*(mDomesPerTank+mCylPerTank)
         mTotal        = (mTotalPerTank*nTanks)*(1.1**nTanks)
         
        
@@ -404,55 +369,54 @@ class TankSet:
         self.mCylPerTank     = mCylPerTank
         self.mTotalPerTank   = mTotalPerTank
         self.mTotal          = mTotal
-<<<<<<< Updated upstream
-=======
+
+
 
 class Subsystems:
-    def __init__(self, mVehicleStart, clsEng, clsOxTankSet,clsFuelTankSet, pwrDrawPayload, strArrayType, strLanderSize, tBattery):
-        pctMarginArray      = .3
-        pctDepthOfDischarge = .3
-        nrgdenBattery       =  100 # w-hr/kg
-        rhoSOFI             =  50 # Foam insulation density (kg/m3)
-        thkSOFI             =  .005 # Foam insulation thickness (m)
-        rhoMLI              =  80 # multi-layer insulation density (kg/m3)
-        thkMLI              =  .001 # multi-layer insulation thickness (m)
-        pctLandingGear      = .08
-        pctStructure        = .2
-        pctMGA              =  .15 # mass growth allowance
-        pctMargin           =  .15 # mass margin percentage
+    def __init__(self, mVehicleStart, clsEng, clsOxTankSet,clsFuelTankSet, clsMonoTankSet, pwrDrawPayload, strArrayType, strLanderSize, tBattery):
+        pctMarginArray      = 0.3
+        pctDepthOfDischarge = 0.7
+        nrgdenBattery       = 100 # w-hr/kg
+        rhoSOFI             = 50  # Foam insulation density (kg/m3)
+        thkSOFI             = 0.005 # Foam insulation thickness (m)
+        rhoMLI              = 80  # multi-layer insulation density (kg/m3)
+        thkMLI              = 0.001 # multi-layer insulation thickness (m)
+        pctLandingGear      = 0.08
+        pctStructure        = 0.2
+        pctMGA              = 0.15 # mass growth allowance
+        pctMargin           = 0.15 # mass margin percentage
         
         # Avionics
-        mAvionics = 8*(mVehicleStart**.361)
+        mAvionics = 8*mVehicleStart**0.361
         
         # Electrical Subsystem      
         if strLanderSize =='Small':
-            mPowerConversion = 30
-            pwrDrawLander    =  300 # W
+            mPowerConversion = 30   
+            pwrDrawLander    = 300 # W
         else:
             mPowerConversion = 50
             pwrDrawLander    = 1200
         
         if strArrayType == 'Body':
-            pwrdenArray =  30 # w/kg
+            pwrdenArray = 30 # w/kg
         else: 
-            pwrdenArray =  75 # w/kg
+            pwrdenArray = 75 # w/kg
         
-        lTank = max(clsOxTankSet.lTankLength,clsFuelTankSet.lTankLength) # pick the maximum length of your clsOxTankSet.lTankLength and clsFuelTankSet.lTanklength
-        mWiring   = 1.058*(mVehicleStart**.5)*(lTank**.25)
+        lTank = max(clsOxTankSet.lTankLength, clsFuelTankSet.lTankLength)
+        mWiring   = 1.058*np.sqrt(mVehicleStart)*lTank**0.25
         
-        pwrTotalMargined = (1+pctMarginArray)*(pwrDrawLander+pwrDrawPayload)#the parenthesis is the sum of lander power and payload power
-        mSolarArray      = pwrTotalMargined/pwrdenArray #divide the total margined power by the density 
+        pwrTotalMargined = (1+pctMarginArray)*(pwrDrawLander+pwrDrawPayload)
+        mSolarArray      = pwrTotalMargined/pwrdenArray  
         
         nrgTotal       = pwrTotalMargined*tBattery
-        nrgTotalMargin = nrgTotal/(1-pctDepthOfDischarge)
-        
-        mBattery       = nrgTotalMargin/nrgdenBattery
+        nrgTotalMargin = nrgTotal/pctDepthOfDischarge
+        mBattery = nrgTotalMargin/nrgdenBattery
         
         mElectrical = mPowerConversion+mWiring + mSolarArray + mBattery
         
         # Propulsion
         if strLanderSize =='Small':
-            mRCS = 20
+            mRCS = 20 
             mPressurization = 50
             mFeedlines = 20
         else:
@@ -460,7 +424,7 @@ class Subsystems:
             mPressurization = 100
             mFeedlines = 50
             
-        if clsOxTankSet.strPropType == 'Oxygen' or clsOxTankSet.strPropType == 'NTO':
+        if clsOxTankSet.strPropType == 'Oxygen':
             mSOFIOx = thkSOFI*clsOxTankSet.saTotalPerTank*clsOxTankSet.nTanks*rhoSOFI
             mMLIOx  = thkMLI*clsOxTankSet.saTotalPerTank*clsOxTankSet.nTanks*rhoMLI
         else:
@@ -476,31 +440,31 @@ class Subsystems:
             mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine = 50
         elif clsFuelTankSet.strPropType == 'MMH':
-            mSOFIFuel = 0
+            mSOFIFuel = thkSOFI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoSOFI
             mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
             twEngine = 50
         elif clsFuelTankSet.strPropType == 'RP-1':
             mSOFIFuel = 0
-            mMLIFuel  = thkMLI*clsFuelTankSet.saTotalPerTank*clsFuelTankSet.nTanks*rhoMLI
+            mMLIFuel  = thkMLI*clsOxTankSet.saTotalPerTank*clsOxTankSet.nTanks*rhoMLI
             twEngine  = 60
         
         mEngine = 1/(twEngine/clsEng.thrust)/9.81
 
-        # Checking mSOFIFuel+mMLIFuel
         mPropulsion = mRCS + mPressurization + mFeedlines + mSOFIOx + mMLIOx + mSOFIFuel + mMLIFuel + mEngine \
-            + clsOxTankSet.mTotal + clsFuelTankSet.mTotal 
+            + clsOxTankSet.mTotal + clsFuelTankSet.mTotal + clsMonoTankSet.mTotal
+
         # Thermal
-        mThermal = .03*mVehicleStart
+        mThermal = 0.03*mVehicleStart
         
         # Structure
         mDryWithoutStructure = mAvionics + mElectrical + mPropulsion + mThermal 
         mStructureAndGear    = mDryWithoutStructure/(1-(pctStructure+pctLandingGear) )*(pctStructure+pctLandingGear)
-
+        
         mTotalBasic     = mDryWithoutStructure + mStructureAndGear
         mMGA            = pctMGA*mTotalBasic
-        mTotalPredicted = mMGA+mTotalBasic
+        mTotalPredicted = mTotalBasic+mMGA
         mMargin         = pctMargin*mTotalBasic
-        mTotalAllowable = mMargin+mTotalPredicted
+        mTotalAllowable = mTotalPredicted + mMargin
         
             
         self.mAvionics         = mAvionics
@@ -529,13 +493,12 @@ class Subsystems:
         
 class Cost:
     def __init__(self,mDryMass, thrEngine, cstRocket):
-        costRELander = 30000000*((mDryMass/2000)**.4)
+        costRELander = 30000000*(mDryMass/2000)**0.4
         costNRELander = 12*costRELander
         costNREEngine  = 2500*thrEngine
-        costNRETotal  = costRELander+costNRELander+costNREEngine # Lander + Engine + Rocket
+        costNRETotal  = costNRELander+costNREEngine+cstRocket
         
         self.costRELander  = costRELander
         self.costNRELander = costNRELander
         self.costNREEngine = costNREEngine
-        self.costNRETotal  = costNRETotal 
->>>>>>> Stashed changes
+        self.costNRETotal  = costNRETotal
