@@ -201,9 +201,9 @@ class MissionSummary:
             mPropBoiloffFuel +=  curPhase.mPropBoiloffFuel
             mPropRCS         +=   curPhase.mPropRCS
             
-            mPropChill       += MissionSummary.mPropChill
-            mPropChillOx     += MissionSummary.mPropChillOx
-            mPropChillFuel   += MissionSummary.mPropChillFuel
+            mPropChill       += curPhase.mPropChill
+            mPropChillOx     += curPhase.mPropChillOx
+            mPropChillFuel   += curPhase.mPropChillFuel
             
             mPropSettling    += MissionSummary.mPropSettling
 
@@ -404,8 +404,6 @@ class TankSet:
         self.mCylPerTank     = mCylPerTank
         self.mTotalPerTank   = mTotalPerTank
         self.mTotal          = mTotal
-<<<<<<< Updated upstream
-=======
 
 class Subsystems:
     def __init__(self, mVehicleStart, clsEng, clsOxTankSet,clsFuelTankSet, pwrDrawPayload, strArrayType, strLanderSize, tBattery):
@@ -538,4 +536,3 @@ class Cost:
         self.costNRELander = costNRELander
         self.costNREEngine = costNREEngine
         self.costNRETotal  = costNRETotal 
->>>>>>> Stashed changes
