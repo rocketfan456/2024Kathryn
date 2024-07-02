@@ -145,6 +145,7 @@ class Phase:
         self.mPropBoiloffFuel   = mPropBoiloffFuel
         self.mPropRCS           = mPropRCS
         self.twPhase            = twPhase
+        self.mPropChill=mChill
         self.mChill             = mChill
         self.mChillOx           = mChillOx
         self.mChillFuel         = mChillFuel
